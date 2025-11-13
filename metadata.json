@@ -1,0 +1,5 @@
+{
+  "name": "Dev Studio Engine",
+  "description": "A hybrid coding playground and game studio. CodeVerse is an all-in-one creative workspace where users can code, design, and share interactive mini-games, simulations, and GUIs, with an AI assistant to help generate code.",
+  "requestFramePermissions": []
+}
