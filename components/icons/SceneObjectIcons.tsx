@@ -1,11 +1,38 @@
 
 import React from 'react';
 
-export const CubeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+// Define a type for lighting info to be passed to icons
+interface LightingInfo {
+    shadowAngle: number;
+    shadowOpacity: number;
+    highlightOpacity: number;
+    lightColor: string;
+}
+interface IconProps extends React.SVGProps<SVGSVGElement> {
+    lighting: LightingInfo;
+}
+
+
+export const CubeIcon: React.FC<IconProps> = ({ lighting, ...props }) => (
+    <svg viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <defs>
+            <linearGradient id="cube-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{stopColor: 'rgba(255,255,255,0.3)'}} />
+                <stop offset="100%" style={{stopColor: 'rgba(0,0,0,0.3)'}} />
+            </linearGradient>
+        </defs>
+        <g style={{ transform: 'rotateX(-30deg) rotateY(45deg) translateZ(10px) translateX(-10px) translateY(10px)' }}>
+            {/* Top face */}
+            <path d="M50 0 L100 25 L50 50 L0 25 Z" fillOpacity="0.8" />
+            {/* Left face */}
+            <path d="M0 25 L50 50 L50 100 L0 75 Z" fillOpacity="0.6" />
+            {/* Right face */}
+            <path d="M50 50 L100 25 L100 75 L50 100 Z" fillOpacity="0.9" />
+             <path d="M50 0 L100 25 L50 50 L0 25 Z" fill="url(#cube-grad)" />
+        </g>
     </svg>
 );
+
 
 export const ViewPortIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} {...props}>
@@ -26,23 +53,60 @@ export const PointLightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
     </svg>
 );
 
-export const PlayerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+export const PlayerIcon: React.FC<IconProps> = ({ lighting, ...props }) => (
     <svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <g fill="currentColor">
-            <circle cx="20" cy="8" r="8" opacity="0.9" />
-            <path d="M20 18 C 12 28, 12 38, 20 58 C 28 38, 28 28, 20 18 Z" opacity="0.8"/>
+        <defs>
+            <radialGradient id="playerHead" cx="0.5" cy="0.5" r="0.5">
+                <stop offset="0%" stopColor={lighting.lightColor} stopOpacity={lighting.highlightOpacity * 2} />
+                <stop offset="100%" stopColor={lighting.lightColor} stopOpacity="0" />
+            </radialGradient>
+             <linearGradient id="playerBody" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0.7"/>
+                <stop offset="50%" stopColor="currentColor" stopOpacity="1"/>
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.7"/>
+            </linearGradient>
+        </defs>
+        <g>
+            {/* Body */}
+            <path d="M8,20 C8,22 10,24 20,24 C30,24 32,22 32,20 L30,58 L10,58 L8,20 Z" fill="url(#playerBody)"/>
+            {/* Head */}
+            <circle cx="20" cy="12" r="12" fill="currentColor" />
+            {/* Highlight */}
+            <circle cx="20" cy="12" r="12" fill="url(#playerHead)" />
         </g>
     </svg>
 );
 
-export const WedgeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 21L21 3v18H3z" />
+export const WedgeIcon: React.FC<IconProps> = ({ lighting, ...props }) => (
+    <svg viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <defs>
+            <linearGradient id="wedge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{stopColor: 'rgba(255,255,255,0.2)'}} />
+                <stop offset="100%" style={{stopColor: 'rgba(0,0,0,0.2)'}} />
+            </linearGradient>
+        </defs>
+         <g style={{ transform: 'rotateX(-20deg) rotateY(35deg)' }}>
+            {/* Top Face */}
+            <path d="M0 0 L100 0 L0 100 Z" fillOpacity="0.9" />
+            {/* Side Face */}
+            <path d="M100 0 L100 100 L0 100 Z" fillOpacity="0.6" />
+             <path d="M0 0 L100 0 L0 100 Z" fill="url(#wedge-grad)" />
+        </g>
     </svg>
 );
 
-export const ConeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2L3 22h18L12 2z" />
+export const ConeIcon: React.FC<IconProps> = ({ lighting, ...props }) => (
+     <svg viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <defs>
+            <radialGradient id="cone-grad" cx="0.5" cy="0.8" r="0.7">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+                <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
+            </radialGradient>
+        </defs>
+        <g style={{ transform: 'translateY(10px)' }}>
+            <ellipse cx="50" cy="85" rx="50" ry="15" fillOpacity="0.7" />
+            <path d="M0 85 L50 0 L100 85 Z" />
+            <path d="M0 85 L50 0 L100 85 Z" fill="url(#cone-grad)" />
+        </g>
     </svg>
 );

@@ -125,6 +125,22 @@
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
       }
+
+      /* Realism Styles */
+      .sky-gradient {
+        background: linear-gradient(to bottom, #1a2a3a, #3a4a5a);
+      }
+      .ground-plane {
+        background-color: #2e3440;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+          radial-gradient(circle at center, rgba(0,0,0,0.1), transparent 70%);
+        background-size: 40px 40px, 40px 40px, 100% 100%;
+      }
+      .object-shadow {
+        filter: drop-shadow(5px 10px 5px rgba(0,0,0,0.3));
+      }
     </style>
   <script type="importmap">
 {

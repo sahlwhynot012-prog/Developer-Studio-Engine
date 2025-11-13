@@ -138,3 +138,9 @@ export const StarterPackIcon: React.FC<React.SVGProps<SVGSVGElement>> = props =>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 3h-3.375a3.75 3.75 0 01-3.35-2.437L12 3.75l-1.275 5.813a3.75 3.75 0 01-3.35 2.437H3" />
     </svg>
 );
+
+export const ValueIcon: React.FC<React.SVGProps<SVGSVGElement>> = props => (
+    <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 8.25h13.5m-13.5 7.5h13.5m-1.5-13.5l-3 16.5m-6-16.5l-3 16.5" />
+    </svg>
+);

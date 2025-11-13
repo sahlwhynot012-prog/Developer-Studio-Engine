@@ -5,7 +5,7 @@ import {
     PlayerIcon as PlayerFileIcon, WedgeIcon, ConeIcon, StarterPlayerIcon, 
     StarterGuiIcon, ReplicatedStorageIcon, ServerScriptServiceIcon, ModelIcon,
     ToolIcon, LocalScriptIcon, ModuleScriptIcon, RemoteEventIcon, ScreenGuiIcon,
-    LightingIcon, AudioIcon, StarterPackIcon
+    LightingIcon, AudioIcon, StarterPackIcon, ValueIcon
 } from './icons/ExplorerIcons';
 import { PlusIcon } from './icons/CoreIcons';
 
@@ -51,12 +51,15 @@ const getIcon = (file: ProjectFile, isOpen: boolean) => {
         case 'Tool': return <ToolIcon className="w-5 h-5 text-lime-400" />;
         case 'RemoteEvent': return <RemoteEventIcon className="w-5 h-5 text-pink-500" />;
         case 'ScreenGui': return <ScreenGuiIcon className="w-5 h-5 text-green-500" />;
+        case 'NumberValue':
+        case 'StringValue':
+             return <ValueIcon className="w-5 h-5 text-teal-400" />;
         default: return <FileIcon className="w-5 h-5 text-gray-400" />;
     }
 };
 
 const FOLDER_ADD_OPTIONS: Record<string, InstanceType[]> = {
-    'workspace': ['Part', 'Wedge', 'Cone', 'Script', 'LocalScript', 'Folder', 'Model'],
+    'workspace': ['Part', 'Wedge', 'Cone', 'Script', 'LocalScript', 'Folder', 'Model', 'Tool', 'PointLight', 'DirectionalLight', 'RemoteEvent'],
     'lighting': ['DirectionalLight', 'PointLight'],
     'replicated-storage': ['RemoteEvent', 'ModuleScript', 'Folder', 'Model'],
     'server-script-service': ['Script', 'ModuleScript', 'Folder'],
@@ -65,12 +68,15 @@ const FOLDER_ADD_OPTIONS: Record<string, InstanceType[]> = {
     'starter-gui': ['ScreenGui'],
     'starter-pack': ['Tool'],
     'assets-folder': ['Folder'],
-    'audio-folder': ['Folder'], // In future, 'Sound'
+    'audio-folder': ['Folder'],
+    'Player': ['Script', 'LocalScript', 'NumberValue', 'StringValue'],
+    'Tool': ['Script', 'LocalScript', 'NumberValue', 'StringValue'],
+    'Model': ['Part', 'Wedge', 'Cone', 'Script', 'LocalScript', 'Folder', 'Model', 'NumberValue', 'StringValue'],
     'default': ['Folder'],
 };
 
-const AddInstanceMenu: React.FC<{ parentId: string, onAdd: (type: InstanceType) => void, onClose: () => void }> = ({ parentId, onAdd, onClose }) => {
-    const options = FOLDER_ADD_OPTIONS[parentId] || FOLDER_ADD_OPTIONS['default'];
+const AddInstanceMenu: React.FC<{ parentType: string, onAdd: (type: InstanceType) => void, onClose: () => void }> = ({ parentType, onAdd, onClose }) => {
+    const options = FOLDER_ADD_OPTIONS[parentType] || FOLDER_ADD_OPTIONS['default'];
     const menuRef = useRef<HTMLDivElement>(null);
 
      useEffect(() => {
@@ -107,14 +113,14 @@ const FileTree: React.FC<{
     const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
     const isSelected = file.id === selectedFileId;
-    const isFolder = file.type === 'Folder' || file.children;
+    const hasChildren = file.children && file.children.length > 0;
 
     const handleClick = () => {
-        if (isFolder) setIsOpen(!isOpen);
+        if (file.children) setIsOpen(!isOpen);
         onFileSelect(file);
     };
     
-    const canAddChildren = isFolder && (FOLDER_ADD_OPTIONS[file.id] || FOLDER_ADD_OPTIONS['default']);
+    const canAddChildren = FOLDER_ADD_OPTIONS[file.type] || (file.type === 'Folder' && (FOLDER_ADD_OPTIONS[file.id] || FOLDER_ADD_OPTIONS['default']));
 
     return (
         <div>
@@ -134,14 +140,14 @@ const FileTree: React.FC<{
                             <PlusIcon className="w-4 h-4"/>
                         </button>
                         {isAddMenuOpen && (
-                            <AddInstanceMenu parentId={file.id} onClose={() => setIsAddMenuOpen(false)} onAdd={(type) => { onAddNewInstance(file.id, type); setIsAddMenuOpen(false); }} />
+                            <AddInstanceMenu parentType={file.type === 'Folder' ? file.id : file.type} onClose={() => setIsAddMenuOpen(false)} onAdd={(type) => { onAddNewInstance(file.id, type); setIsAddMenuOpen(false); }} />
                         )}
                     </div>
                  )}
             </div>
-            {isFolder && isOpen && file.children && (
+            {isOpen && hasChildren && (
                 <div className="mt-1">
-                    {file.children.map(child => (
+                    {file.children!.map(child => (
                         <FileTree key={child.id} file={child} onFileSelect={onFileSelect} level={level + 1} selectedFileId={selectedFileId} onContextMenu={onContextMenu} onAddNewInstance={onAddNewInstance} />
                     ))}
                 </div>

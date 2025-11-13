@@ -31,7 +31,11 @@ const basicSceneTemplate: ProjectTemplate = {
     files: [
         { 
             id: 'workspace', name: 'Workspace', ...PROTECTED_FOLDER, children: [
-                { id: 'player-1', name: 'Player', type: 'Player' },
+                { 
+                    id: 'player-1', name: 'Player', type: 'Player', children: [
+                        { id: 'player-health', name: 'Health', type: 'NumberValue', value: 100 }
+                    ] 
+                },
                 { id: 'cube-1', name: 'CoolCube', type: 'Part' },
             ]
         },
@@ -75,7 +79,7 @@ const basicSceneTemplate: ProjectTemplate = {
         { id: 'main-light', name: 'DirectionalLight', type: 'DirectionalLight', position: { x: 50, y: 50, z: 100 }, rotation: {x:0, y:0, z:0}, scale: {x:1, y:1, z:1}, color: '#facc15', intensity: 1.5 },
     ],
     logs: [
-        { type: 'log', message: 'DSE Engine v1.04 initialized (Lua-first).' },
+        { type: 'log', message: 'DSE Engine v1.05 initialized (Realism & Values Update).' },
         { type: 'log', message: 'Use W, A, S, D or Arrow Keys to move the player.' },
     ],
     activeScriptId: 'player-controller',

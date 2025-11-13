@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { SceneObject, ProjectFile, ConsoleLog, ProjectState, SaveStatus, InstanceType, GuiObject } from './types';
+import { SceneObject, ProjectFile, ConsoleLog, ProjectState, SaveStatus, InstanceType, ValueType, StringValue, NumberValue } from './types';
 import TopBar from './components/TopBar';
 import LeftSidebar from './components/LeftSidebar';
 import MainView from './components/MainView';
@@ -17,12 +17,14 @@ export default function App() {
   
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [sceneObjects, setSceneObjects] = useState<SceneObject[]>([]);
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null); // For scene interaction
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null); // For hierarchy interaction
+  
   const [activeScriptId, setActiveScriptId] = useState<string | null>(null);
   const [isPlayMode, setIsPlayMode] = useState<boolean>(false);
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
 
-  // FIX: Moved `addLog` before its usage in `useEffect` and `handleSave` to resolve block-scoped variable errors.
   const addLog = useCallback((log: ConsoleLog) => {
     setConsoleLogs(prev => [...prev, { ...log, timestamp: new Date().toLocaleTimeString() }]);
   }, []);
@@ -34,6 +36,7 @@ export default function App() {
     setSceneObjects(template.sceneObjects);
     setConsoleLogs(template.logs);
     setActiveScriptId(template.activeScriptId);
+    setSelectedFileId(template.selectedObjectId);
     setSelectedObjectId(template.selectedObjectId);
     setProjectState('editor');
     setSaveStatus('unsaved');
@@ -46,6 +49,7 @@ export default function App() {
     setConsoleLogs([]);
     setActiveScriptId(null);
     setSelectedObjectId(null);
+    setSelectedFileId(null);
   };
 
   // --- SAVE SYSTEM ---
@@ -79,19 +83,20 @@ export default function App() {
   }, [addLog]);
   
   // --- STATE DERIVATION & MEMOS ---
-  const activeScript = useMemo(() => {
-    if (!activeScriptId) return undefined;
-    const findScript = (items: ProjectFile[]): ProjectFile | undefined => {
+  const findFileById = useCallback((items: ProjectFile[], id: string | null): ProjectFile | undefined => {
+      if (!id) return undefined;
       for (const item of items) {
-        if (item.id === activeScriptId) return item;
+        if (item.id === id) return item;
         if (item.children) {
-          const found = findScript(item.children);
+          const found = findFileById(item.children, id);
           if (found) return found;
         }
       }
-    };
-    return findScript(files);
-  }, [activeScriptId, files]);
+  }, []);
+
+  const activeScript = useMemo(() => findFileById(files, activeScriptId), [activeScriptId, files, findFileById]);
+  
+  const selectedFile = useMemo(() => findFileById(files, selectedFileId), [selectedFileId, files, findFileById]);
 
   const selectedObject = useMemo(() => 
     sceneObjects.find(obj => obj.id === selectedObjectId) || null,
@@ -101,6 +106,7 @@ export default function App() {
   // --- HANDLERS ---
   const handleSelectObject = useCallback((id: string | null) => {
     setSelectedObjectId(id);
+    setSelectedFileId(id); // Sync selection
   }, []);
   
   const handleUpdateObject = useCallback((updatedObject: SceneObject) => {
@@ -109,14 +115,19 @@ export default function App() {
   }, []);
 
   const handleFileSelect = useCallback((file: ProjectFile) => {
-    // FIX: Corrected casing for 'Script' type to match InstanceType and prevent a logic bug.
+    setSelectedFileId(file.id);
     if (['Script', 'LocalScript', 'ModuleScript'].includes(file.type)) {
         setActiveScriptId(file.id);
-    // FIX: Corrected casing for 'Folder' type to match InstanceType. This resolves a type comparison error.
-    } else if (file.type !== 'Folder') {
-        setSelectedObjectId(file.id);
+    } else {
+        // Check if it's a scene object to also select it in the viewport
+        const isSceneObj = sceneObjects.some(obj => obj.id === file.id);
+        if(isSceneObj) {
+            setSelectedObjectId(file.id);
+        } else {
+            setSelectedObjectId(null); // It's a non-scene object like a Value
+        }
     }
-  }, []);
+  }, [sceneObjects]);
   
   const handleCodeChange = useCallback((newCode: string) => {
     setSaveStatus('unsaved');
@@ -136,34 +147,29 @@ export default function App() {
     });
   }, [activeScriptId]);
 
-  const clearLogs = useCallback(() => {
-    setConsoleLogs([]);
-  }, []);
-
     const handleFileDelete = useCallback((fileId: string) => {
-        const deleteFile = (items: ProjectFile[]): ProjectFile[] => {
+        const deleteFileRecursive = (items: ProjectFile[]): ProjectFile[] => {
             return items.filter(item => {
                 if (item.id === fileId) {
                     if (item.undeletable) {
                         addLog({ type: 'warn', message: `Cannot delete protected system folder: ${item.name}` });
-                        return true;
+                        return true; // Keep it
                     }
-                    // Also remove from scene if it's a scene object
-                    // FIX: Corrected casing for 'Folder' type to match InstanceType. This resolves a type comparison error.
-                    if (item.type !== 'Folder' && !item.type.endsWith('Script') && item.type !== 'asset') {
-                        setSceneObjects(prev => prev.filter(obj => obj.id !== item.id));
-                    }
-                    return false;
+                    setSceneObjects(prev => prev.filter(obj => obj.id !== item.id));
+                    if (selectedFileId === item.id) setSelectedFileId(null);
+                    if (selectedObjectId === item.id) setSelectedObjectId(null);
+                    if (activeScriptId === item.id) setActiveScriptId(null);
+                    return false; // Delete it
                 }
                 if (item.children) {
-                    item.children = deleteFile(item.children);
+                    item.children = deleteFileRecursive(item.children);
                 }
                 return true;
             });
         };
-        setFiles(currentFiles => deleteFile(currentFiles));
+        setFiles(currentFiles => deleteFileRecursive(JSON.parse(JSON.stringify(currentFiles))));
         setSaveStatus('unsaved');
-    }, [addLog]);
+    }, [addLog, selectedFileId, selectedObjectId, activeScriptId]);
 
     const handleFileRename = useCallback((fileId: string, newName: string) => {
         const renameFile = (items: ProjectFile[]): ProjectFile[] => {
@@ -173,7 +179,6 @@ export default function App() {
                         addLog({ type: 'warn', message: `Cannot rename protected system folder: ${item.name}` });
                         return item;
                     }
-                    // Also rename in scene objects
                     setSceneObjects(prev => prev.map(obj => obj.id === fileId ? {...obj, name: newName} : obj));
                     return { ...item, name: newName };
                 }
@@ -183,11 +188,10 @@ export default function App() {
                 return item;
             });
         };
-        setFiles(currentFiles => renameFile(currentFiles));
+        setFiles(currentFiles => renameFile(JSON.parse(JSON.stringify(currentFiles))));
         setSaveStatus('unsaved');
     }, [addLog]);
 
-  // FIX: Moved `handleAddNewInstance` before `handleCreateScript` to resolve block-scoped variable error.
   const handleAddNewInstance = useCallback((parentId: string, type: InstanceType, content?: string) => {
     setSaveStatus('unsaved');
     const newId = `${type}-${uuidv4()}`;
@@ -195,15 +199,8 @@ export default function App() {
     
     const newInstanceFile: ProjectFile = { id: newId, name: newName, type };
 
-    // Create SceneObject for physical items
     if (['Part', 'Wedge', 'Cone', 'DirectionalLight', 'PointLight'].includes(type)) {
-        const commonProps = {
-            id: newId,
-            name: newName,
-            position: { x: 400, y: 300, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-        };
+        const commonProps = { id: newId, name: newName, position: { x: 400, y: 300, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } };
         let newSceneObject: SceneObject;
         if (['Part', 'Wedge', 'Cone'].includes(type)) {
             newSceneObject = { ...commonProps, type: type as 'Part' | 'Wedge' | 'Cone', color: '#cccccc' };
@@ -211,12 +208,12 @@ export default function App() {
             newSceneObject = { ...commonProps, type: type as 'DirectionalLight' | 'PointLight', color: '#ffffff', intensity: 1 };
         }
         setSceneObjects(prev => [...prev, newSceneObject]);
-    }
-
-    // Create specific file types
-    if (type.endsWith('Script')) {
+    } else if (type.endsWith('Script')) {
         newInstanceFile.content = content || `-- New ${type}\n`;
         setActiveScriptId(newId);
+    } else if (type.endsWith('Value')) {
+      if (type === 'NumberValue') (newInstanceFile as NumberValue).value = 0;
+      if (type === 'StringValue') (newInstanceFile as StringValue).value = '';
     } else if (type.startsWith('ScreenGui')) {
       newInstanceFile.children = [];
     }
@@ -240,6 +237,24 @@ export default function App() {
         return newFiles;
     });
 
+  }, []);
+
+  const handleUpdateFileValue = useCallback((fileId: string, value: string | number) => {
+    setSaveStatus('unsaved');
+    setFiles(currentFiles => {
+        const findAndUpdate = (items: ProjectFile[]): ProjectFile[] => {
+            return items.map(item => {
+                if (item.id === fileId) {
+                    return { ...item, value };
+                }
+                if (item.children) {
+                    return { ...item, children: findAndUpdate(item.children) };
+                }
+                return item;
+            });
+        };
+        return findAndUpdate(currentFiles);
+    });
   }, []);
 
   const handleCreateScript = useCallback((code: string, type: 'Script' | 'LocalScript' | 'ModuleScript' = 'Script') => {
@@ -283,7 +298,7 @@ export default function App() {
         <LeftSidebar 
           files={files} 
           onFileSelect={handleFileSelect} 
-          selectedFileId={activeScriptId || selectedObjectId}
+          selectedFileId={selectedFileId}
           onAddNewInstance={handleAddNewInstance}
           onFileDelete={handleFileDelete}
           onFileRename={handleFileRename}
@@ -303,7 +318,9 @@ export default function App() {
         </div>
         <RightSidebar 
           selectedObject={selectedObject} 
+          selectedFile={selectedFile}
           onUpdateObject={handleUpdateObject} 
+          onUpdateFileValue={handleUpdateFileValue}
           onCodeInsert={handleCodeChange}
           addLog={addLog}
           onCreateScript={handleCreateScript}

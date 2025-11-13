@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { SceneObject, ConsoleLog } from '../types';
+import { SceneObject, ConsoleLog, ProjectFile } from '../types';
 import PropertiesPanel from './PropertiesPanel';
 import AiAssistant from './AiAssistant';
 import SnippetsPanel from './SnippetsPanel';
@@ -8,7 +8,9 @@ import { InspectIcon, WandIcon, CodeIcon } from './icons/CoreIcons';
 
 interface RightSidebarProps {
   selectedObject: SceneObject | null;
+  selectedFile: ProjectFile | null;
   onUpdateObject: (object: SceneObject) => void;
+  onUpdateFileValue: (fileId: string, value: string | number) => void;
   onCodeInsert: (code: string) => void;
   addLog: (log: ConsoleLog) => void;
   onCreateScript: (code: string) => void;
@@ -24,7 +26,9 @@ const RightSidebar: React.FC<RightSidebarProps> = (props) => {
             case 'properties':
                 return <PropertiesPanel 
                     selectedObject={props.selectedObject} 
+                    selectedFile={props.selectedFile}
                     onUpdateObject={props.onUpdateObject} 
+                    onUpdateFileValue={props.onUpdateFileValue}
                 />;
             case 'ai':
                  return <AiAssistant 

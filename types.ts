@@ -12,6 +12,8 @@ export type ScriptType = 'Script' | 'LocalScript' | 'ModuleScript';
 
 export type GuiType = 'ScreenGui' | 'Frame' | 'TextButton';
 
+export type ValueType = 'NumberValue' | 'StringValue';
+
 export type InstanceType = 
   | 'Folder'
   | 'Model'
@@ -20,7 +22,8 @@ export type InstanceType =
   | 'asset'
   | SceneObjectType
   | ScriptType
-  | GuiType;
+  | GuiType
+  | ValueType;
 
 
 // --- SCENE OBJECTS (Physical/Visual) ---
@@ -94,7 +97,7 @@ export type GuiObject = ScreenGuiObject | FrameObject | TextButtonObject;
 
 
 // --- FILE HIERARCHY ---
-export interface ProjectFile {
+export interface BaseProjectFile {
   id: string;
   name: string;
   type: InstanceType;
@@ -102,13 +105,24 @@ export interface ProjectFile {
   content?: string; // For scripts
   undeletable?: boolean;
   unrenameable?: boolean;
-  // GUI properties can be stored here too, or in a separate state map
-  // For simplicity, we can add optional GUI props here
   position?: { x: number, y: number };
   size?: { x: number, y: number };
   backgroundColor?: string;
   text?: string;
 }
+
+export interface StringValue extends BaseProjectFile {
+    type: 'StringValue';
+    value: string;
+}
+
+export interface NumberValue extends BaseProjectFile {
+    type: 'NumberValue';
+    value: number;
+}
+
+export type ProjectFile = BaseProjectFile | StringValue | NumberValue;
+
 
 // --- PROJECT & APP STATE ---
 export type ProjectState = 'main-menu' | 'loading' | 'editor';

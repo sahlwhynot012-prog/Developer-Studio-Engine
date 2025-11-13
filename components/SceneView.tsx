@@ -12,6 +12,13 @@ interface SceneViewProps {
   isPlayMode: boolean;
 }
 
+interface LightingInfo {
+    shadowAngle: number;
+    shadowOpacity: number;
+    highlightOpacity: number;
+    lightColor: string;
+}
+
 const usePlayerMovement = (
     player: SceneObject | undefined, 
     onUpdateObject: (object: SceneObject) => void,
@@ -65,16 +72,21 @@ const SceneEntity: React.FC<{
   object: SceneObject;
   isSelected: boolean;
   onSelect: (id: string) => void;
-}> = ({ object, isSelected, onSelect }) => {
+  lighting: LightingInfo;
+}> = ({ object, isSelected, onSelect, lighting }) => {
     const getIcon = () => {
+        const iconProps = {
+             className: "w-full h-full object-shadow",
+             lighting: lighting,
+        };
         switch (object.type) {
-            case 'Player': return <PlayerIcon className="w-full h-full" style={{ color: object.color }} />;
-            case 'Part': return <CubeIcon className="w-full h-full opacity-90" />;
+            case 'Player': return <PlayerIcon {...iconProps} style={{ color: object.color }} />;
+            case 'Part': return <CubeIcon {...iconProps} style={{ color: object.color }} />;
             case 'ViewPort': return <ViewPortIcon className="w-full h-full opacity-90" />;
             case 'DirectionalLight': return <LightIcon className="w-full h-full opacity-90" />;
             case 'PointLight': return <PointLightIcon className="w-full h-full opacity-90" />;
-            case 'Wedge': return <WedgeIcon className="w-full h-full opacity-90" />;
-            case 'Cone': return <ConeIcon className="w-full h-full opacity-90" />;
+            case 'Wedge': return <WedgeIcon {...iconProps} style={{ color: object.color }}/>;
+            case 'Cone': return <ConeIcon {...iconProps} style={{ color: object.color }}/>;
             default: return null;
         }
     };
@@ -83,18 +95,16 @@ const SceneEntity: React.FC<{
         width: `${40 * object.scale.x}px`,
         height: `${40 * object.scale.y}px`,
         transform: `rotateX(${object.rotation.x}deg) rotateY(${object.rotation.y}deg) rotateZ(${object.rotation.z}deg)`,
-        backgroundColor: object.color,
         backgroundImage: object.texture ? `url(${object.texture})` : 'none',
         backgroundSize: 'cover',
     };
     
     if (object.type === 'Player') {
-        entityStyle.width = `${40 * object.scale.x}px`;
-        entityStyle.height = `${60 * object.scale.y}px`;
-        entityStyle.transform = `translateX(-50%) translateY(-100%)`;
+        entityStyle.width = `40px`;
+        entityStyle.height = `60px`;
+        entityStyle.transform = `translateX(-50%) translateY(-100%) scaleX(${object.scale.x}) scaleY(${object.scale.y})`;
         entityStyle.transformOrigin = 'bottom center';
     }
-
 
     return (
         <div 
@@ -112,12 +122,14 @@ const SceneEntity: React.FC<{
                     ${isSelected ? 'z-10' : ''}
                 `}
             >
-              <div className={`w-full h-full ${isSelected ? 'outline outline-2 outline-offset-2 outline-cyan-400' : ''}`}>
+              <div className={`w-full h-full ${isSelected ? 'outline outline-2 outline-offset-2 outline-cyan-400 rounded-md' : ''}`}>
                 {getIcon()}
               </div>
-              {object.type === 'Player' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/40 rounded-[50%] blur-sm"></div>}
-              {isSelected && object.type === 'Player' && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-cyan-400 rounded-[50%] blur-md"></div>
+              {object.type === 'Player' && (
+                  <div 
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-2 bg-black rounded-[50%] blur-sm"
+                    style={{ opacity: lighting.shadowOpacity * 0.8 }}
+                  ></div>
               )}
             </div>
         </div>
@@ -145,6 +157,19 @@ const SceneView: React.FC<SceneViewProps> = ({ files, sceneObjects, selectedObje
         const lightIds = lightingFolder.children.map(f => f.id);
         return sceneObjects.filter(obj => lightIds.includes(obj.id)) as LightObject[];
     }, [files, sceneObjects]);
+    
+    const lightingInfo = useMemo<LightingInfo>(() => {
+        const dirLight = lightsInScene.find(l => l.type === 'DirectionalLight');
+        if (!dirLight) return { shadowAngle: 135, shadowOpacity: 0.3, highlightOpacity: 0.1, lightColor: '#ffffff' };
+        
+        const angle = (Math.atan2(dirLight.position.y - worldBounds.height/2, dirLight.position.x - worldBounds.width/2) * 180 / Math.PI) - 90;
+        return {
+            shadowAngle: angle,
+            shadowOpacity: Math.min(0.7, dirLight.intensity * 0.3),
+            highlightOpacity: Math.min(0.5, dirLight.intensity * 0.15),
+            lightColor: dirLight.color,
+        };
+    }, [lightsInScene, worldBounds]);
 
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -216,7 +241,7 @@ const SceneView: React.FC<SceneViewProps> = ({ files, sceneObjects, selectedObje
                 <ViewIcon className="w-5 h-5 text-cyan-400" />
                 <span className="font-semibold text-sm">ViewPort</span>
             </div>
-            <div className="w-full flex-1 relative overflow-hidden flex items-center justify-center p-4">
+            <div className="w-full flex-1 relative overflow-hidden flex items-center justify-center p-4 sky-gradient">
                 <div 
                   className="relative transition-transform duration-500"
                   style={{ transformStyle: 'preserve-3d', ...cameraStyle, transition: isPanning.current || isRotating.current ? 'none' : 'transform 0.5s' }}
@@ -227,20 +252,30 @@ const SceneView: React.FC<SceneViewProps> = ({ files, sceneObjects, selectedObje
                         style={{ 
                             width: `${worldBounds.width}px`,
                             height: `${worldBounds.height}px`,
-                            backgroundSize: '40px 40px',
-                            backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)',
+                            transform: 'rotateX(90deg) translateZ(-100px)',
                             boxShadow: '0 0 80px rgba(0,0,0,0.7)',
-                            backgroundColor: '#20222a'
                         }}
-                        className="relative"
+                        className="relative ground-plane"
                     >
-                        {/* Only render non-light objects here. Lights are for effect only. */}
-                        {sceneObjects.filter(o => o.type !== 'DirectionalLight' && o.type !== 'PointLight').map(obj => (
+                        {lightsInScene.filter(l => l.type === 'PointLight').map(light => (
+                             <div key={light.id} className="absolute rounded-full" style={{
+                                left: light.position.x,
+                                top: light.position.y,
+                                width: 100 * light.intensity,
+                                height: 100 * light.intensity,
+                                background: `radial-gradient(circle, ${light.color}11, transparent 60%)`,
+                                transform: 'translate(-50%, -50%)'
+                             }}></div>
+                        ))}
+                    </div>
+                     <div className="absolute top-0 left-0" style={{ transformStyle: 'preserve-3d', width: `${worldBounds.width}px`, height: `${worldBounds.height}px` }}>
+                        {sceneObjects.filter(o => o.type !== 'DirectionalLight' && o.type !== 'PointLight' && o.type !== 'ViewPort').map(obj => (
                             <SceneEntity
                                 key={obj.id}
                                 object={obj}
                                 isSelected={obj.id === selectedObjectId}
                                 onSelect={onSelectObject}
+                                lighting={lightingInfo}
                             />
                         ))}
                     </div>
